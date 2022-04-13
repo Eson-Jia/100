@@ -7,7 +7,7 @@ import (
 
 // Test InterleavePrintOneChan
 func TestInterleavePrint(t *testing.T) {
-	InterleavePrintOneChan()
+	InterleavePrintWaitTwoGoroutineQuit()
 }
 
 func Test7(t *testing.T) {
