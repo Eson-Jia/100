@@ -182,9 +182,78 @@ func pase_student() {
 ### 解析
 
 `for ... range`会复用变量 stu,每次循环迭代都会将 slice 中的值拷贝的 stu 中。但是需要注意，stu 变量的地址一直保持固定不变。 所以每次对 stu 取地址得到的都是同一个地址。而 stu
-在循环结束后的值定格在 stus 最后一个元素 wang,所以 map 中所有的键都指向 wang.
+在循环结束后的值定格在 stus 最后一个元素 wang,所以 map 中所有的键都指向 wang。
 
+## 20.下面的代码会输出什么，并说明原因
 
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+	"runtime"
+)
+
+func main() {
+	runtime.GOMAXPROCS(1)
+	var wg sync.WaitGroup
+	wg.Add(20)
+	for i := 0; i < 10; i++ {
+		go func() {
+			fmt.Println("i: ", i)
+			wg.Done()
+		}()
+	}
+	for i := 0; i < 10; i++ {
+		go func(i int) {
+			fmt.Println("i: ", i)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+}
+```
+
+### 解析
+
+这个输出结果决定来于调度器优先调度哪个G。从 runtime 的源码中可以看出，当创建一个 G时，会优先放入下一个调度的 runnext 字段上作为下一次优先调度的G。 因此最先输出的是最后创建的 G，也就是9.
+
+```go
+package main
+
+import "unsafe"
+
+func newproc(siz int32, fn *funcval) {
+	argp := add(unsafe.Pointer(&fn), sys.PtrSize)
+	gp := getp()
+	pc := getcallerpc()
+	Systemstack(func() {
+		newg := newproc1(fn, argp, siz, gp, pc)
+		_p_ := getp().m.p.ptr()
+		//新创建的G会调用这个方法来决定如何调度
+		runqput(_p_, newg, true)
+		if mainStarted {
+			wakep()
+		}
+	})
+	//...
+	if next {
+	retryNext:
+		oldnext := _p_.runnext
+		// 当 next 是true时总会将新进来的G放入下一次调度字段中
+		if !_p_.runnext.cas(oldnext, guintptr(unsafe.Pointer(gp))) {
+			goto retryNext
+		}
+		if oldnext == 0 {
+			return
+		}
+		// kick the old runnext out to the regular run queue.
+		// 将 old runnext 踢到正常运行队列中
+		qp = oldnext.ptr()
+	}
+}
+```
 
 
 
