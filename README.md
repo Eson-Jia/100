@@ -33,13 +33,16 @@ alphabet 写完才能再接着写。
 ## 7. 下⾯代码能运⾏吗？为什么
 
 ```go
+package main
+
 type Param map[string]interface{}
 type Show struct {
-Param
+	Param
 }
+
 func main1() {
-s := new(Show)
-s.Param["RMB"] = 10000
+	s := new(Show)
+	s.Param["RMB"] = 10000
 }
 ```
 
@@ -52,26 +55,33 @@ s.Param["RMB"] = 10000
 ## 11. 请找出下⾯代码的问题所在
 
 ```go
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
 func main() {
-ch := make(chan int, 1000)
-go func () {
-for i := 0; i < 10; i++ {
-ch <- i
-}
-}()
-go func () {
-for {
-a, ok := <-ch
-if !ok {
-fmt.Println("close")
-return
-}
-fmt.Println("a: ", a)
-}
-}()
-close(ch)
-fmt.Println("ok")
-time.Sleep(time.Second * 100)
+	ch := make(chan int, 1000)
+	go func() {
+		for i := 0; i < 10; i++ {
+			ch <- i
+		}
+	}()
+	go func() {
+		for {
+			a, ok := <-ch
+			if !ok {
+				fmt.Println("close")
+				return
+			}
+			fmt.Println("a: ", a)
+		}
+	}()
+	close(ch)
+	fmt.Println("ok")
+	time.Sleep(time.Second * 100)
 }
 ```
 
@@ -137,6 +147,7 @@ func main() {
 ### 解析
 
 依据4个goroutine的启动后执⾏效率，很可能打印111func4，但其他的111func*也可能先执⾏， exec只会返回⼀ 条信息。
+至于为什么很可能打印 111func4呢？那是因为 Go 会把最新创建的 G 放入 processor 的 runnext 标记中，来保证其优先被执行。所以当最后一个加入的最有可能被优先执行。
 
 ## 19.以下代码有什么问题，说明原因
 
